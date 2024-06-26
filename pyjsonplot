@@ -1,0 +1,172 @@
+#!/usr/bin/env python3
+import json, os, sys
+import matplotlib.pyplot as plt
+import numpy as np
+
+
+def load_json_data(file):
+    with open(file, "r") as f:
+        return json.load(f)
+
+
+colors = [
+    "#1C1C1C",
+    "#2F4F4F",
+    "#556B2F",
+    "#8B4513",
+    "#4682B4",
+    "#D2691E",
+    "#9ACD32",
+    "#A52A2A",
+    "#DAA520",
+    "#5F9EA0",
+    "#7FFF00",
+    "#DCDCDC",
+    "#8A2BE2",
+    "#FF6347",
+    "#FFD700",
+    "#4B0082",
+    "#FF00FF",
+    "#800080",
+    "#FF4500",
+    "#2E8B57",
+]
+
+
+def get_color():
+    return np.random.choice(colors)
+
+
+json_file = sys.argv[1]
+config = load_json_data(json_file)
+pdf_file = os.path.splitext(json_file)[0] + ".pdf"
+
+fig, ax1 = plt.subplots(figsize=(8, 6))
+x = range(max(len(s["data"]) for s in config["subplots"]))
+
+ax1.set_ylabel(config["y_axis_label"], labelpad=10)
+if config["y_axis_logscale"]:
+    ax1.set_yscale("log")
+ax1.grid(True)
+
+if config["draw_continuous_x_axis"]:
+    ax1.set_xlabel(config["continuous_x_label"], labelpad=2)
+    ax1.set_xticks([])
+else:
+    ax1.set_xticks(x)
+    ax1.set_xticklabels(config["x_labels"] if config["x_labels"] else [])
+
+secondary_ax = ax1.twinx() if config["draw_y_axis_right"] else None
+if secondary_ax:
+    secondary_ax.set_ylabel(config["y_axis_label_right"], labelpad=10)
+    if config["y_axis_logscale_right"]:
+        secondary_ax.set_yscale("log")
+
+styles = ["-", "--", "-.", ":"]
+markers = [
+    "o",
+    "s",
+    "^",
+    "D",
+    "v",
+    "<",
+    ">",
+    "1",
+    "2",
+    "3",
+    "4",
+    "p",
+    "H",
+    "h",
+    "+",
+    "x",
+    "*",
+    "d",
+    "|",
+    "_",
+    "P",
+    "X",
+]
+patterns = [
+    "/",
+    "\\",
+    "|",
+    "-",
+    "+",
+    "x",
+    "o",
+    "O",
+    ".",
+    "*",
+    "//",
+    "\\\\",
+    "||",
+    "--",
+    "++",
+    "xx",
+    "oo",
+    "OO",
+    "..",
+    "**",
+]
+
+for subplot in config["subplots"]:
+    data = (
+        [y / subplot["normalize_to"] for y in subplot["data"]]
+        if subplot["normalize_to"]
+        else subplot["data"]
+    )
+    color = get_color()
+    ax = secondary_ax if subplot["use_secondary_axis"] and secondary_ax else ax1
+    if subplot["shape"] == "line":
+        ax.plot(
+            x[: len(data)],
+            data,
+            label=subplot["name"],
+            color=color,
+            linestyle=np.random.choice(styles),
+        )
+    elif subplot["shape"] == "line-vertex":
+        ax.plot(
+            x[: len(data)],
+            data,
+            label=subplot["name"],
+            color=color,
+            linestyle=np.random.choice(styles),
+            marker=np.random.choice(markers),
+        )
+    elif subplot["shape"] == "bar":
+        ax.bar(
+            x[: len(data)],
+            data,
+            label=subplot["name"],
+            color=color,
+            edgecolor="black",
+            hatch=np.random.choice(patterns),
+            alpha=0.5,
+        )
+    elif subplot["shape"] == "area":
+        ax.fill_between(
+            x[: len(data)], 0, data, label=subplot["name"], color=color, alpha=0.5
+        )
+
+if config["draw_legend"]:
+    handles, labels = [], []
+    for ax in (ax1, secondary_ax) if secondary_ax else (ax1,):
+        for handle, label in zip(*ax.get_legend_handles_labels()):
+            if label not in labels:
+                handles.append(handle)
+                labels.append(label)
+    ax1.legend(
+        handles,
+        labels,
+        loc="upper center",
+        bbox_to_anchor=(0.5, -0.07),
+        fancybox=True,
+        shadow=True,
+        ncol=3,
+    )
+
+fig.subplots_adjust(left=0.18, right=0.85, top=0.85, bottom=0.15)
+plt.savefig(pdf_file, bbox_inches="tight")
+plt.close()
